@@ -16,3 +16,7 @@ Because of the big endian and little endian, byte ordering is staple.
 Ifilework is a project to develop a client and server ftp in C language using sockets api.
 
 Just search "ftp server in c" in Google, you will find some helpful results.
+
+
+[List of raw FTP commands](http://www.nsftools.com/tips/RawFTP.htm)
+

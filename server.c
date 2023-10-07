@@ -1,13 +1,4 @@
-#include <sys/socket.h>
-#include <netinet/in.h>
-
-#include <unistd.h>
-#include <errno.h>
-
-#include <ctype.h>
-#include <string.h>
-#include <memory.h>
-#include <stdio.h>
+#include "common.h"
 
 int main(int argc, char **argv) {
 	int listenfd, connfd;		//监听socket和连接socket不一样，后者用于数据传输
