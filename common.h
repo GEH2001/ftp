@@ -8,7 +8,9 @@
 #include <string.h>
 #include <memory.h>
 #include <stdio.h>
+#include <stdlib.h>
 
+#define BSIZE 8192  // buffer size
 
 /* the state of the connection between client and server */
 typedef struct state
@@ -46,9 +48,8 @@ typedef struct command {
 void parse_command(char *, command *);
 
 
-
+void sock_process(int);
 /*commands handle functions*/
-void response(command *, state *);
+void cmd_response(command *, state *);
 void cmd_user(command *, state *);
 void cmd_pass(command *, state *);
-

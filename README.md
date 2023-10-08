@@ -25,3 +25,6 @@ Just search "ftp server in c" in Google, you will find some helpful results.
 Public FTP Server:
 - ftp.gnu.org (anonymous only)
 - ftp.acc.umu.se
+
+[RFC 959](https://www.w3.org/Protocols/rfc959/)
+- End-of-Line: \r\n

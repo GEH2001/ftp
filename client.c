@@ -7,6 +7,11 @@
 #include <string.h>
 #include <memory.h>
 #include <stdio.h>
+#include <arpa/inet.h>
+/*
+	for:
+		inet_pton
+*/
 
 int main(int argc, char **argv) {
 	int sockfd;
@@ -36,45 +41,51 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	//获取键盘输入
-	fgets(sentence, 4096, stdin);
-	len = strlen(sentence);
-	sentence[len] = '\n';
-	sentence[len + 1] = '\0';
-	
-	//把键盘输入写入socket
-	p = 0;
-	while (p < len) {
-		int n = write(sockfd, sentence + p, len + 1 - p);		//write函数不保证所有的数据写完，可能中途退出
-		if (n < 0) {
-			printf("Error write(): %s(%d)\n", strerror(errno), errno);
-			return 1;
- 		} else {
-			p += n;
-		}			
-	}
+	read(sockfd, sentence, 8191);
+	printf("%s", sentence);
 
-	//榨干socket接收到的内容
-	p = 0;
-	while (1) {
-		int n = read(sockfd, sentence + p, 8191 - p);
-		if (n < 0) {
-			printf("Error read(): %s(%d)\n", strerror(errno), errno);	//read不保证一次读完，可能中途退出
-			return 1;
-		} else if (n == 0) {
-			break;
-		} else {
-			p += n;
-			if (sentence[p - 1] == '\n') {
+	while(1) {
+		//获取键盘输入
+		fgets(sentence, 4096, stdin);
+		len = strlen(sentence);
+		sentence[len] = '\n';
+		sentence[len + 1] = '\0';
+		
+		//把键盘输入写入socket
+		p = 0;
+		while (p < len) {
+			int n = write(sockfd, sentence + p, len + 1 - p);		//write函数不保证所有的数据写完，可能中途退出
+			if (n < 0) {
+				printf("Error write(): %s(%d)\n", strerror(errno), errno);
+				return 1;
+			} else {
+				p += n;
+			}			
+		}
+
+		//榨干socket接收到的内容
+		p = 0;
+		while (1) {
+			int n = read(sockfd, sentence + p, 8191 - p);
+			if (n < 0) {
+				printf("Error read(): %s(%d)\n", strerror(errno), errno);	//read不保证一次读完，可能中途退出
+				return 1;
+			} else if (n == 0) {
 				break;
+			} else {
+				p += n;
+				if (sentence[p - 1] == '\n') {
+					break;
+				}
 			}
 		}
+
+		//注意：read并不会将字符串加上'\0'，需要手动添加
+		sentence[p - 1] = '\0';
+
+		printf("FROM SERVER: %s\n", sentence);
+	
 	}
-
-	//注意：read并不会将字符串加上'\0'，需要手动添加
-	sentence[p - 1] = '\0';
-
-	printf("FROM SERVER: %s", sentence);
 
 	close(sockfd);
 

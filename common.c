@@ -1,10 +1,14 @@
 #include "common.h"
 
 void write_state(state *st) {
-    write(st->sock_control, st->message, strlen(st->message));
+    // TODO: add \r\n
+    if(write(st->sock_control, st->message, strlen(st->message)) == -1) {
+        printf("Error write(): %s(%d)\n", strerror(errno), errno);
+    }
 }
 
 int cmd_to_id(char *cmd) {
+
     int total = sizeof(cmdlist_str) / sizeof(cmdlist_str[0]);
     for(int i = 0; i < total; i++) {
         if(strncmp(cmd, cmdlist_str[i], sizeof(cmd)) == 0) {
@@ -15,6 +19,7 @@ int cmd_to_id(char *cmd) {
 }
 
 void parse_command(char *cmdstr, command *cmd) {
+    // TODO: remove \r\n
     char *token = strtok(cmdstr, " ");  // split by " "
     if(token) {
         strncpy(cmd->code, token, sizeof(cmd->code));
@@ -35,12 +40,39 @@ void parse_command(char *cmdstr, command *cmd) {
     */
 }
 
+/* TODO: use thread to process connected socket */
+void sock_process(int connfd) {
+    command cmd;
+    state st;
+    char buf[BSIZE];
+    memset(&cmd, 0, sizeof(cmd));
+    memset(&st, 0, sizeof(st));
+    memset(buf, 0, sizeof(buf));
+    st.sock_control = connfd;
 
-void response(command *cmd, state *st) {
+    // welcome
+    st.message = "220 Anonymous FTP server ready.\n";
+    write_state(&st);
+
+    // wait for command, read can block
+    while(read(connfd, buf, BSIZE-1)) {
+        parse_command(buf, &cmd);
+        cmd_response(&cmd, &st);
+        memset(buf, 0, sizeof(buf)); // clear buffer
+    }
+    // TODO: handle EOF & -1
+
+    printf("client closed the connection.\n");
+
+    close(connfd);
+
+}
+
+void cmd_response(command *cmd, state *st) {
     switch (cmd_to_id(cmd->code))
     {
     case USER: cmd_user(cmd, st); break;
-    
+    case PASS: cmd_pass(cmd, st); break;
     default:
         st->message = "?Invalid command.\n";
         write_state(st);
@@ -50,16 +82,24 @@ void response(command *cmd, state *st) {
 
 /*Handle USER*/
 void cmd_user(command *cmd, state *st) {
-    if(strncmp(cmd->arg, "anonymous", sizeof(cmd->arg)) == 0) {
-        st->user_ok = 1;
-        st->message = "331 Guest login ok, send your complete e-mail address as password.\n";
+    if(!st->user_ok) {
+        if(strncmp(cmd->arg, "anonymous", strlen("anonymous")) == 0) {  // TODO: fix strlen, use sizeof(arg)
+            st->user_ok = 1;
+            st->message = "331 Guest ok, send your complete e-mail address as password using PASS.\n";
+        } else {
+            st->message = "530 This FTP server is anonymous only.\n";
+        }
     } else {
-        st->message = "530 This FTP server is anonymous only.\n";
+        if(st->is_login) {
+            st->message = "230 Already logged in.\n";
+        } else {
+            st->message = "331 Send your e-mail as password using PASS.\n";
+        }
     }
     write_state(st);
 }
 
-/*Handle PASS*/
+
 void cmd_pass(command *cmd, state *st) {
     if(st->user_ok) {
         if(st->is_login) {
