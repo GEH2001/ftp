@@ -20,3 +20,8 @@ Just search "ftp server in c" in Google, you will find some helpful results.
 
 [List of raw FTP commands](http://www.nsftools.com/tips/RawFTP.htm)
 
+[How FTP actually works in practice](http://cr.yp.to/ftp.html)
+
+Public FTP Server:
+- ftp.gnu.org (anonymous only)
+- ftp.acc.umu.se

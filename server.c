@@ -60,22 +60,30 @@ int main(int argc, char **argv) {
 		sentence[p - 1] = '\0';
 		len = p - 1;
 		
-		//字符串处理
-		for (p = 0; p < len; p++) {
-			sentence[p] = toupper(sentence[p]);
-		}
+		// //字符串处理
+		// for (p = 0; p < len; p++) {
+		// 	sentence[p] = toupper(sentence[p]);
+		// }
 
-		//发送字符串到socket
- 		p = 0;
-		while (p < len) {
-			int n = write(connfd, sentence + p, len + 1 - p);
-			if (n < 0) {
-				printf("Error write(): %s(%d)\n", strerror(errno), errno);
-				return 1;
-	 		} else {
-				p += n;
-			}			
-		}
+		// //发送字符串到socket
+ 		// p = 0;
+		// while (p < len) {
+		// 	int n = write(connfd, sentence + p, len + 1 - p);
+		// 	if (n < 0) {
+		// 		printf("Error write(): %s(%d)\n", strerror(errno), errno);
+		// 		return 1;
+	 	// 	} else {
+		// 		p += n;
+		// 	}			
+		// }
+
+		printf("From Client: %s\n", sentence);
+
+		command cmd;
+		state st;
+		st.sock_control = connfd;
+		parse_command(sentence, &cmd);
+		response(&cmd, &st);
 
 		close(connfd);
 	}

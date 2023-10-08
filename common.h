@@ -10,11 +10,18 @@
 #include <stdio.h>
 
 
+/* the state of the connection between client and server */
 typedef struct state
 {
     int sock_control;     // the control socket for the server
     int sock_data;        // the data socket for the server
+    char *message;        // response message to client
+    int user_ok;          // is user allowed? (only anonymous)
+    int is_login;         // is user logged in?
 } state;
+
+/* write current state to client */
+void write_state(state *);
 
 typedef enum cmdlist {
     USER, PASS, RETR, STOR, QUIT, SYST, TYPE, PORT, 
@@ -42,6 +49,6 @@ void parse_command(char *, command *);
 
 /*commands handle functions*/
 void response(command *, state *);
-void user(command *, state *);
-void pass(command *, state *);
+void cmd_user(command *, state *);
+void cmd_pass(command *, state *);
 
