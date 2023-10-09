@@ -21,6 +21,8 @@ Just search "ftp server in c" in Google, you will find some helpful results.
 [List of raw FTP commands](http://www.nsftools.com/tips/RawFTP.htm)
 
 [How FTP actually works in practice](http://cr.yp.to/ftp.html)
+- Look at the 1st session, which contains the **format of request and response**, such as the ending character.
+
 
 Public FTP Server:
 - ftp.gnu.org (anonymous only)
@@ -28,3 +30,13 @@ Public FTP Server:
 
 [RFC 959](https://www.w3.org/Protocols/rfc959/)
 - End-of-Line: \r\n
+
+
+Fixed BUGs
+- Blocked in the `while(1)` loop when read, because there is no '\n' from server.
+- All the buffers such as cmd and state.message should be reset to 0 before next write.
+- Use `htons` to set port, otherwise you get port 34074(0x851A) when you set port 6789(0x1A85).
+- There is some difference between `inet_ntop` and `inet_ntoa` although they are similar, and the former is a new version of the latter.
+- When you quit server before client, the code `close(sock_listen)` is not to be executed, which results in an error "Error bind(): Address already in use(98)" the next time you execute server. But it will return to normal in a few minutes.
+- Define `char[BSIZE]` instead of `char *` inside of struct state.
+- The size of verb in command must be over 5.

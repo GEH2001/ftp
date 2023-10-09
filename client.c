@@ -46,13 +46,15 @@ int main(int argc, char **argv) {
 
 	while(1) {
 		//获取键盘输入
+		memset(sentence, 0, 8192);
 		fgets(sentence, 4096, stdin);
 		len = strlen(sentence);
-		sentence[len] = '\n';
-		sentence[len + 1] = '\0';
-		
+
+		sentence[len - 1] = '\0';
+
 		//把键盘输入写入socket
 		p = 0;
+
 		while (p < len) {
 			int n = write(sockfd, sentence + p, len + 1 - p);		//write函数不保证所有的数据写完，可能中途退出
 			if (n < 0) {
