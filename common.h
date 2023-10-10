@@ -1,3 +1,4 @@
+#pragma once
 #include <sys/socket.h>
 #include <netinet/in.h>
 
@@ -69,9 +70,13 @@ void parse_command(char *, command *);
 
 
 void sock_process(int);
+/* Create a socket to listen [port], and return the socket (-1 for error) */
+int socket_listen(int port);
 /*commands handle functions*/
 void cmd_response(command *, state *);
 void cmd_user(command *, state *);
 void cmd_pass(command *, state *);
-void cmd_port(command *, state *);
+void cmd_port(command *, state *); // TODO
 void cmd_pasv(command *, state *);
+void cmd_cwd(command *, state *);
+void cmd_pwd(command *, state *);

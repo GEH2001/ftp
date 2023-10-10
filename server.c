@@ -16,26 +16,8 @@ void server(int port, char *root) {
 	int sock_listen, sock_control;
 	struct sockaddr_in addr;
 
-	// init a socket
-	if((sock_listen = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
-		printf("Error socket(): %s(%d)\n", strerror(errno), errno);
-		exit(1);
-	}
-	// ip & port
-	memset(&addr, 0, sizeof(addr));
-	addr.sin_family = AF_INET;
-	addr.sin_port = port;	// TODO: htons(port)
-	addr.sin_addr.s_addr = htonl(INADDR_ANY);	// ip 0.0.0.0
-	// bind
-	if (bind(sock_listen, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
-		printf("Error bind(): %s(%d)\n", strerror(errno), errno);
-		exit(1);
-	}
-	// listen
-	if (listen(sock_listen, 10) == -1) {
-		printf("Error listen(): %s(%d)\n", strerror(errno), errno);
-		exit(1);
-	}
+	sock_listen = socket_listen(port);
+	if(sock_listen == -1) return;
 
 	while(1) {
 		// wait for connect, accept can block
@@ -48,4 +30,6 @@ void server(int port, char *root) {
 		sock_process(sock_control);
 	}
 	close(sock_listen);
+	// TODO: Can not close if the program exit in while(1) above.
+	// TODO: atexit(close all socket)
 }

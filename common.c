@@ -114,6 +114,12 @@ void sock_process(int connfd) {
 
     // wait for command, read can block
     while(read(connfd, buf, BSIZE-1)) {
+        // printf("%s", buf);
+        int len = strlen(buf);
+        if(len > 1) {   // remove \r\n
+            buf[len-2] = '\0';
+            buf[len-1] = '\0';
+        }
         parse_command(buf, &cmd);
         cmd_response(&cmd, &st);
         memset(buf, 0, sizeof(buf)); // clear buffer
@@ -128,12 +134,42 @@ void sock_process(int connfd) {
 
 }
 
+int socket_listen(int port) {
+	int sock_listen;
+	struct sockaddr_in addr;
+
+	// init a socket
+	if((sock_listen = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
+		printf("Error socket(): %s(%d)\n", strerror(errno), errno);
+		return -1;
+	}
+	// ip & port
+	memset(&addr, 0, sizeof(addr));
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons(port);
+	addr.sin_addr.s_addr = htonl(INADDR_ANY);	// ip 0.0.0.0
+	// bind
+	if (bind(sock_listen, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
+		printf("Error bind(): %s(%d)\n", strerror(errno), errno);
+		return -1;
+	}
+	// listen
+	if (listen(sock_listen, 10) == -1) {
+		printf("Error listen(): %s(%d)\n", strerror(errno), errno);
+		return -1;
+	}
+    return sock_listen;
+}
+
+
 void cmd_response(command *cmd, state *st) {
     switch (cmd_to_id(cmd->code))
     {
     case USER: cmd_user(cmd, st); break;
     case PASS: cmd_pass(cmd, st); break;
     case PASV: cmd_pasv(cmd, st); break;
+    case CWD: cmd_cwd(cmd, st); break;
+    case PWD: cmd_pwd(cmd, st); break;
     default:
         // st->message = "?Invalid command.\n";
         sprintf(st->message, "?Invalid command.");
@@ -196,16 +232,45 @@ void cmd_pasv(command *cmd, state *st) {
             int p1 = port / 256;
             int p2 = port % 256;
             int ip[4] = {0, 0, 0, 0};
-            char buf[100];
             get_ip(st->sock_control, ip); // TODO: return -1
-            // TODO: create a socket to listen here
-            // st.mode
-            // st.sock_pasv
+            int sockfd = socket_listen(port);   // TODO: return -1
+            // TODO: st.mode
+            st->sock_pasv = sockfd;
             sprintf(st->message, "227 =(%d,%d,%d,%d,%d,%d)", ip[0], ip[1], ip[2], ip[3], p1, p2);
         }
     } else {
         // st->message = "530 Permission denied. First login with USER and PASS.\n";
         sprintf(st->message, "530 Permission denied. First login with USER and PASS.");
+    }
+    write_state(st);
+}
+
+
+void cmd_cwd(command *cmd, state *st) {
+    if(st->is_login) {
+        if(chdir(cmd->arg) == 0) {
+            sprintf(st->message, "250 Directory successfully changed.");
+        } else {
+            sprintf(st->message, "550 Failed to change directory.");
+        }
+    } else {
+        sprintf(st->message, "530 Permission denied. First login with USER and PASS.");
+    }
+    write_state(st);
+}
+
+void cmd_pwd(command *cmd, state *st) {
+    if(st->is_login) {
+        char buf[264];
+        memset(buf, 0, sizeof(buf));
+        if(getcwd(buf, 256) == NULL) {
+            perror("Error getcwd()");
+            sprintf(st->message, "Server error"); // TODO: status code
+        } else {
+            sprintf(st->message, "257 \"%s\"", buf);
+        }
+    } else {
+        sprintf(st->message, "530 Permission denied. First login with USER and PASS.");        
     }
     write_state(st);
 }

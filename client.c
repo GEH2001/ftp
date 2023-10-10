@@ -29,7 +29,8 @@ int main(int argc, char **argv) {
 	//设置目标主机的ip和port
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
-	addr.sin_port = 6789;
+	// addr.sin_port = 6789;
+	addr.sin_port = htons(6789);
 	if (inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr) <= 0) {			//转换ip地址:点分十进制-->二进制
 		printf("Error inet_pton(): %s(%d)\n", strerror(errno), errno);
 		return 1;
@@ -50,7 +51,9 @@ int main(int argc, char **argv) {
 		fgets(sentence, 4096, stdin);
 		len = strlen(sentence);
 
-		sentence[len - 1] = '\0';
+		// sentence[len - 1] = '\0';
+		sentence[len - 1] = '\r';
+		sentence[len] = '\n';
 
 		//把键盘输入写入socket
 		p = 0;

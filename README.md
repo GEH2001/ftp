@@ -40,3 +40,6 @@ Fixed BUGs
 - When you quit server before client, the code `close(sock_listen)` is not to be executed, which results in an error "Error bind(): Address already in use(98)" the next time you execute server. But it will return to normal in a few minutes.
 - Define `char[BSIZE]` instead of `char *` inside of struct state.
 - The size of verb in command must be over 5.
+
+Use orginal ftp tool to connect the server.
+- open 127.0.0.1 6789
