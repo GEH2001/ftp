@@ -80,3 +80,4 @@ void cmd_port(command *, state *); // TODO
 void cmd_pasv(command *, state *);
 void cmd_cwd(command *, state *);
 void cmd_pwd(command *, state *);
+void cmd_list(command *, state *);

@@ -2,22 +2,16 @@
 
 #include "common.h"
 
+#include "utils.h"
+
 int main() {
 
-    char buf[200];
-    char *a = "../code";
-    getcwd(buf, 200);
-    printf("%s\n", buf);
-    if(chdir(a) == 0) {
-        printf("chdir ok\n");
-        getcwd(buf, 200);
-        printf("%s\n", buf);
-    } else {
-        printf("chdir fail\n");
-    }
-    char *b = "./oop";
-    chdir(b);
-    getcwd(buf, 200);
-    printf("%s\n", buf);
+    char buf[BSIZE];
+    list_files(buf, BSIZE, "");
+
+    printf("%s", buf);
+    printf("%ld\n", strlen(buf));
+
     return 0;
 }
+ 

@@ -1,4 +1,5 @@
 #include "common.h"
+#include "utils.h"
 
 void write_state(state *st) {
     st->message[BSIZE - 4] = '\0'; // There must be space for "\r\n"
@@ -114,7 +115,7 @@ void sock_process(int connfd) {
 
     // wait for command, read can block
     while(read(connfd, buf, BSIZE-1)) {
-        // printf("%s", buf);
+        printf("%s", buf);
         int len = strlen(buf);
         if(len > 1) {   // remove \r\n
             buf[len-2] = '\0';
@@ -170,6 +171,7 @@ void cmd_response(command *cmd, state *st) {
     case PASV: cmd_pasv(cmd, st); break;
     case CWD: cmd_cwd(cmd, st); break;
     case PWD: cmd_pwd(cmd, st); break;
+    case LIST: cmd_list(cmd, st); break;
     default:
         // st->message = "?Invalid command.\n";
         sprintf(st->message, "?Invalid command.");
@@ -236,7 +238,7 @@ void cmd_pasv(command *cmd, state *st) {
             int sockfd = socket_listen(port);   // TODO: return -1
             // TODO: st.mode
             st->sock_pasv = sockfd;
-            sprintf(st->message, "227 =(%d,%d,%d,%d,%d,%d)", ip[0], ip[1], ip[2], ip[3], p1, p2);
+            sprintf(st->message, "227 =%d,%d,%d,%d,%d,%d", ip[0], ip[1], ip[2], ip[3], p1, p2);
         }
     } else {
         // st->message = "530 Permission denied. First login with USER and PASS.\n";
@@ -271,6 +273,37 @@ void cmd_pwd(command *cmd, state *st) {
         }
     } else {
         sprintf(st->message, "530 Permission denied. First login with USER and PASS.");        
+    }
+    write_state(st);
+}
+
+// TODO: use data-sock
+void cmd_list(command* cmd, state *st) {
+    if(st->is_login) {
+        char buf[BSIZE];
+        int connfd;
+        if((connfd = accept(st->sock_pasv, NULL, NULL)) == -1) {
+            perror("Error accept()");
+        }
+        sprintf(st->message, "150 Here comes the directory listing.");
+        write_state(st);
+        if(list_files(buf, BSIZE, cmd->arg) == -1) {
+            sprintf(st->message, "Server error"); // TODO: status code
+        } else {
+
+            // write(connfd, buf, BSIZE);
+            // char ansd[100] = "-rw-r--r-- 1 geh geh   177 Oct 11 22:33 utils.h\r\n";
+            // write(connfd, ansd, 100);
+            // char ansda[100] = "-rw-r--r-- 1 geh geh   256 Oct 11 22:33 util45.h\r\n";
+            // write(connfd, ansda, 100);
+            write_list_files(connfd, cmd->arg);
+
+            sprintf(st->message, "226 Directory send OK.");
+            close(connfd);
+            close(st->sock_pasv);
+        }
+    } else {
+        sprintf(st->message, "530 Permission denied. First login with USER and PASS.");
     }
     write_state(st);
 }

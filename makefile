@@ -3,10 +3,11 @@ all: client server
 client: client.c
 	gcc -o client client.c
 
-server: server.c common.c common.h
-	gcc -o server server.c common.c
+server: server.c common.c utils.c
+	gcc -o server server.c common.c utils.c
 
-main: main.c common.c common.h
-	gcc main.c common.c -o main
+main: main.c common.c utils.c
+	gcc -o main main.c common.c utils.c
+
 clean:
 	rm client server main
