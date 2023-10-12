@@ -8,6 +8,7 @@
 #include "utils.h"
 // 
 #include <sys/socket.h>
+#include <sys/stat.h> // mkdir
 #include <netinet/in.h>
 
 #include <unistd.h>
@@ -29,3 +30,5 @@ void cmd_pasv(command *, state *);
 void cmd_cwd(command *, state *);
 void cmd_pwd(command *, state *);
 void cmd_list(command *, state *);
+void cmd_mkd(command *, state *);
+void cmd_rmd(command *, state *);

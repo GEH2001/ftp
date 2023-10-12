@@ -1,10 +1,16 @@
 /*func test file*/
 
+#include <sys/stat.h>
+#include <stdio.h>
+#include <stdlib.h>
 int main() {
 
-    char buf[20] = "ada";
-    strcat(buf, "\012\015");
-    printf("%s", buf);
+    int res = mkdir("../hello", 0777);
+    char *path = realpath("../hello", NULL);
+    printf("%s\n", path);
+    if(res == -1) { 
+        printf("error(%d)\n", res);
+    }
     return 0;
 }
  

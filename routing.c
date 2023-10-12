@@ -9,6 +9,8 @@ void cmd_response(command *cmd, state *st) {
     case CWD: cmd_cwd(cmd, st); break;
     case PWD: cmd_pwd(cmd, st); break;
     case LIST: cmd_list(cmd, st); break;
+    case MKD: cmd_mkd(cmd, st); break;
+    case RMD: cmd_rmd(cmd, st); break;
     default:
         // st->message = "?Invalid command.\n";
         sprintf(st->message, "?Invalid command.");
@@ -144,4 +146,35 @@ void cmd_list(command* cmd, state *st) {
         sprintf(st->message, "530 Permission denied. First login with USER and PASS.");
     }
     write_state(st);
+}
+
+void cmd_mkd(command *cmd, state *st) {
+    if(st->is_login) {
+        if(mkdir(cmd->arg, 0777) == 0) {
+            char *path = realpath(cmd->arg, NULL);
+            if(path != NULL) {
+                sprintf(st->message, "257 Successfully created: \"%s\"", path);
+            } else {
+                sprintf(st->message, "250 Successfully created.");
+            }
+        } else {
+            sprintf(st->message, "550 Failed to create directory.");
+        }
+    } else {
+        sprintf(st->message, "530 Permission denied. First login with USER and PASS.");
+    }
+    write_state(st);
+}
+
+void cmd_rmd(command *cmd, state *st) {
+    if(st->is_login) {
+        if(rmdir(cmd->arg) == 0) {
+            sprintf(st->message, "250 Successfully removed.");
+        } else {
+            sprintf(st->message, "550 Failed to remove the directory.");
+        }
+    } else {
+        sprintf(st->message, "530 Permission denied. First login with USER and PASS.");
+    }
+    write_state(st); 
 }
