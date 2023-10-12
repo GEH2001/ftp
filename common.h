@@ -20,28 +20,14 @@ typedef struct state
 {
     int sock_control;     // the control socket for the server
     int sock_data;        // the data socket for the server
-    int sock_pasv;        // pasv data socket
-    // char *message;        // response message to client
-    char message[BSIZE];
+    int sock_pasv;        // pasv data socket just for listening
+    char message[BSIZE];  // response message to client
     int user_ok;          // is user allowed? (only anonymous)
     int is_login;         // is user logged in?
+    int mode;             // NORMAL, PASSIVE
 } state;
 // TODO: socket should not be inited with 0
 
-
-/* Return a random port for PASV mode */
-int gen_port();
-/* Return 1 if port is available, else 0 */
-int port_available(int port);
-
-/**
- * Get the IP address associated with the given socket
- * 
- * @param sockfd The socket file descriptor.
- * @param ip A buffer to store IP (length must be 4 or over).
- * @return -1 if failed, else 0
-*/
-int get_ip(int sockfd, int *ip);
 /* write current state to client */
 void write_state(state *);
 
@@ -53,6 +39,14 @@ typedef enum cmdlist {
 static const char *cmdlist_str[] = {
     "USER", "PASS", "RETR", "STOR", "QUIT", "SYST", "TYPE", "PORT", 
     "PASV", "MKD", "CWD", "PWD", "LIST", "RMD", "RNFR", "RNTO"
+};
+
+/**
+ * NORMAL: only one socket for control
+ * PASSIVE: PASV create another socket for data transfer
+*/
+enum mode {
+    NORMAL, PASSIVE
 };
 
 /* cmd to id, "USER" -> USER, unknown -> -1 */

@@ -6,12 +6,9 @@
 
 int main() {
 
-    char buf[BSIZE];
-    list_files(buf, BSIZE, "");
-
+    char buf[20] = "ada";
+    strcat(buf, "\012\015");
     printf("%s", buf);
-    printf("%ld\n", strlen(buf));
-
     return 0;
 }
  

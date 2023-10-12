@@ -22,60 +22,6 @@ int cmd_to_id(char *cmd) {
 }
 
 
-int gen_port() {
-    // TODO: check if the port is used or not
-    srand(time(NULL));
-    
-    // between 20000 and 65535
-    int lower_bound = 20000;
-    int upper_bound = 65535;
-    int port;
-    do {
-        port = rand() % (upper_bound - lower_bound + 1) + lower_bound;
-    } while(!port_available(port));
-    return port;
-}
-
-int port_available(int port) {
-    int sockfd;
-    struct sockaddr_in addr;
-
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if(sockfd == -1) {
-        perror("Error socket() in port_available()\n");
-        return 0;
-    }
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
-    addr.sin_addr.s_addr = INADDR_ANY;
-    // Try binding to the port
-    if (bind(sockfd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
-        perror("Error bind() in port_available()\n");
-        close(sockfd);
-        return 0;
-    }
-
-    close(sockfd);
-    return 1;  // Port is available
-}
-
-int get_ip(int sockfd, int *ip) {
-    struct sockaddr_in addr;
-    socklen_t addr_size = sizeof(addr);
-    if(getsockname(sockfd, (struct sockaddr*)&addr, &addr_size) == -1) {
-        perror("Error: getsockname()\n");
-        return -1;  // failed
-    }
-    char buf[20];
-    memset(buf, 0, 20);
-    inet_ntop(AF_INET, &addr.sin_addr, buf, 19);
-    // inet_ntoa
-    sscanf(buf, "%d.%d.%d.%d", &ip[0], &ip[1], &ip[2], &ip[3]);
-    return 0;
-}
-
-
 void parse_command(char *cmdstr, command *cmd) {
     // TODO: remove \r\n
     char *token = strtok(cmdstr, " ");  // split by " "
@@ -236,8 +182,8 @@ void cmd_pasv(command *cmd, state *st) {
             int ip[4] = {0, 0, 0, 0};
             get_ip(st->sock_control, ip); // TODO: return -1
             int sockfd = socket_listen(port);   // TODO: return -1
-            // TODO: st.mode
             st->sock_pasv = sockfd;
+            st->mode = PASSIVE;
             sprintf(st->message, "227 =%d,%d,%d,%d,%d,%d", ip[0], ip[1], ip[2], ip[3], p1, p2);
         }
     } else {
@@ -280,27 +226,28 @@ void cmd_pwd(command *cmd, state *st) {
 // TODO: use data-sock
 void cmd_list(command* cmd, state *st) {
     if(st->is_login) {
-        char buf[BSIZE];
-        int connfd;
-        if((connfd = accept(st->sock_pasv, NULL, NULL)) == -1) {
-            perror("Error accept()");
-        }
-        sprintf(st->message, "150 Here comes the directory listing.");
-        write_state(st);
-        if(list_files(buf, BSIZE, cmd->arg) == -1) {
-            sprintf(st->message, "Server error"); // TODO: status code
-        } else {
-
-            // write(connfd, buf, BSIZE);
-            // char ansd[100] = "-rw-r--r-- 1 geh geh   177 Oct 11 22:33 utils.h\r\n";
-            // write(connfd, ansd, 100);
-            // char ansda[100] = "-rw-r--r-- 1 geh geh   256 Oct 11 22:33 util45.h\r\n";
-            // write(connfd, ansda, 100);
-            write_list_files(connfd, cmd->arg);
-
+        if(st->mode == PASSIVE) {
+            char buf[BSIZE];
+            int connfd;
+            if((connfd = accept(st->sock_pasv, NULL, NULL)) == -1) {
+                perror("Error accept()");
+                sprintf(st->message, "Server error");   // TODO: Server error
+                write_state(st);
+                return;
+            }
+            close(st->sock_pasv); // stop listening for new connection
+            sprintf(st->message, "150 Here comes the directory listing."); // mask
+            write_state(st);
+            if(write_list_files(connfd, cmd->arg) == -1) {
+                sprintf(st->message, "451 Server error reading the directory.");
+                write_state(st);
+                return;
+            } // TODO: 426 error
             sprintf(st->message, "226 Directory send OK.");
             close(connfd);
-            close(st->sock_pasv);
+            st->mode = NORMAL;
+        } else {
+            sprintf(st->message, "425 Use PASV or PORT to establish a data connection.");
         }
     } else {
         sprintf(st->message, "530 Permission denied. First login with USER and PASS.");
