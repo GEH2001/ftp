@@ -15,6 +15,7 @@ typedef struct state
     int user_ok;          // is user allowed? (only anonymous)
     int is_login;         // is user logged in?
     int mode;             // NORMAL, PASSIVE
+    char rnfile[256];     // RNFR file
 } state;
 // TODO: socket should not be inited with 0
 

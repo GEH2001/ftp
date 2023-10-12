@@ -141,3 +141,23 @@ int write_list_files(int sock_data, const char *path) {
     fclose(pipe);
     return 0;
 }
+
+
+int is_file_visiable(const char *path) {
+    // check if the file exist using access()
+    if(access(path, F_OK) != -1) {
+        const char *basename = strrchr(path, '/'); // the last '/'
+        // input: "./main.c", "main.c", ".", "..", "./.gitignore", "/home/geh"
+        if(basename) {
+            basename++;
+        } else {
+            basename = path;
+        }
+        
+        // Usually, invisible files start with '.' or '..' 
+        if(basename[0] != '.') {
+            return 1;
+        }
+    }
+    return 0;
+}

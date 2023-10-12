@@ -32,3 +32,5 @@ void cmd_pwd(command *, state *);
 void cmd_list(command *, state *);
 void cmd_mkd(command *, state *);
 void cmd_rmd(command *, state *);
+void cmd_rnfr(command *, state *);
+void cmd_rnto(command *, state *);

@@ -1,3 +1,9 @@
+/**
+ * For RNFR & RNTO,
+ * There is a line of code: `memset(st->rnfile, 0, sizeof st->rnfile)` in each cmd function except `cmd_rnfr`.
+ * It is for the length of st.rnfile is zero. In this way, RNFR and RNTO always come up in pairs.
+*/
+
 #include "routing.h"
 
 void cmd_response(command *cmd, state *st) {
@@ -11,8 +17,9 @@ void cmd_response(command *cmd, state *st) {
     case LIST: cmd_list(cmd, st); break;
     case MKD: cmd_mkd(cmd, st); break;
     case RMD: cmd_rmd(cmd, st); break;
+    case RNFR: cmd_rnfr(cmd, st); break;
+    case RNTO: cmd_rnto(cmd, st); break;
     default:
-        // st->message = "?Invalid command.\n";
         sprintf(st->message, "?Invalid command.");
         write_state(st);
         break;
@@ -23,21 +30,18 @@ void cmd_user(command *cmd, state *st) {
     if(!st->user_ok) {
         if(strncmp(cmd->arg, "anonymous", sizeof cmd->arg) == 0) {
             st->user_ok = 1;
-            // st->message = "331 Guest ok, send your complete e-mail address as password using PASS.\n";
             sprintf(st->message, "331 Guest ok, send your complete e-mail address as password using PASS.");
         } else {
-            // st->message = "530 This FTP server is anonymous only.\n";
             sprintf(st->message, "530 This FTP server is anonymous only.");
         }
     } else {
         if(st->is_login) {
-            // st->message = "230 Already logged in.\n";
             sprintf(st->message, "230 Already logged in.");
         } else {
-            // st->message = "331 Send your e-mail as password using PASS.\n";
             sprintf(st->message, "331 Send your e-mail as password using PASS.");
         }
     }
+    memset(st->rnfile, 0, sizeof st->rnfile);
     write_state(st);
 }
 
@@ -45,17 +49,15 @@ void cmd_user(command *cmd, state *st) {
 void cmd_pass(command *cmd, state *st) {
     if(st->user_ok) {
         if(st->is_login) {
-            // st->message = "203 Do not login repeatedly.\n";
             sprintf(st->message, "203 Do not login repeatedly.");
         } else {
             st->is_login = 1;
-            // st->message = "230 Login Successful.\n";
             sprintf(st->message, "230 Login Successful.");
         }
     } else {
-        // st->message = "503 You should use USER command before PASS.\n";
         sprintf(st->message, "503 You should use USER command before PASS.");
     }
+    memset(st->rnfile, 0, sizeof st->rnfile);
     write_state(st);
 }
 
@@ -63,7 +65,6 @@ void cmd_pass(command *cmd, state *st) {
 void cmd_pasv(command *cmd, state *st) {
     if(st->is_login) {
         if(strlen(cmd->arg) != 0) {
-            // st->message = "504 PASV parameters are prohibited.\n";
             sprintf(st->message, "504 PASV parameters are prohibited. %s", cmd->arg);
         } else {
             // close previous passive socket
@@ -80,9 +81,9 @@ void cmd_pasv(command *cmd, state *st) {
             sprintf(st->message, "227 =%d,%d,%d,%d,%d,%d", ip[0], ip[1], ip[2], ip[3], p1, p2);
         }
     } else {
-        // st->message = "530 Permission denied. First login with USER and PASS.\n";
         sprintf(st->message, "530 Permission denied. First login with USER and PASS.");
     }
+    memset(st->rnfile, 0, sizeof st->rnfile);
     write_state(st);
 }
 
@@ -97,6 +98,7 @@ void cmd_cwd(command *cmd, state *st) {
     } else {
         sprintf(st->message, "530 Permission denied. First login with USER and PASS.");
     }
+    memset(st->rnfile, 0, sizeof st->rnfile);
     write_state(st);
 }
 
@@ -113,6 +115,7 @@ void cmd_pwd(command *cmd, state *st) {
     } else {
         sprintf(st->message, "530 Permission denied. First login with USER and PASS.");        
     }
+    memset(st->rnfile, 0, sizeof st->rnfile);
     write_state(st);
 }
 
@@ -145,6 +148,7 @@ void cmd_list(command* cmd, state *st) {
     } else {
         sprintf(st->message, "530 Permission denied. First login with USER and PASS.");
     }
+    memset(st->rnfile, 0, sizeof st->rnfile);
     write_state(st);
 }
 
@@ -163,6 +167,7 @@ void cmd_mkd(command *cmd, state *st) {
     } else {
         sprintf(st->message, "530 Permission denied. First login with USER and PASS.");
     }
+    memset(st->rnfile, 0, sizeof st->rnfile);
     write_state(st);
 }
 
@@ -176,5 +181,44 @@ void cmd_rmd(command *cmd, state *st) {
     } else {
         sprintf(st->message, "530 Permission denied. First login with USER and PASS.");
     }
+    memset(st->rnfile, 0, sizeof st->rnfile);
+    write_state(st); 
+}
+
+void cmd_rnfr(command *cmd, state *st) {
+    if(st->is_login) {
+        // TODO: Unsafe operation
+        if(is_file_visiable(cmd->arg)) {
+            memset(st->rnfile, 0, sizeof st->rnfile); // clear the buf
+            sprintf(st->rnfile, "%s", cmd->arg);
+            sprintf(st->message, "350 File to be renamed.");
+        } else {
+            sprintf(st->message, "550 File not exist.");
+        }
+    } else {
+        sprintf(st->message, "530 Permission denied. First login with USER and PASS.");
+    }
+    write_state(st); 
+}
+
+void cmd_rnto(command *cmd, state *st) {
+    if(st->is_login) {
+        if(strlen(st->rnfile) != 0) { // Only when the last command is FNFR will this condition satisfiy.
+            if(access(cmd->arg, F_OK) != -1) {
+                sprintf(st->message, "550 New pathname already exists.");
+            } else {
+                if(rename(st->rnfile, cmd->arg) == 0) {
+                    sprintf(st->message, "250 Rename successfully.");
+                } else {
+                    sprintf(st->message, "553 Failed to rename.");
+                }
+            }
+        } else {
+            sprintf(st->message, "503 RNTO must come immediately after RNFR.");
+        }
+    } else {
+        sprintf(st->message, "530 Permission denied. First login with USER and PASS.");
+    }
+    memset(st->rnfile, 0, sizeof st->rnfile);
     write_state(st); 
 }

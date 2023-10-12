@@ -49,4 +49,8 @@ int get_ip(int sockfd, int *ip);
 */
 int write_list_files(int sock_data, const char *path);
 
+/* Return 1 if visible, else 0 */
+int is_file_visiable(const char *path);
 
+/* Rename oldfile to newfile, return -1 for errors, else 0 */
+int rn_file(const char *oldfile, const char *newfile);
