@@ -1,4 +1,10 @@
+/**
+ * Utility file
+*/
 #pragma once
+
+#include "basic.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -9,6 +15,18 @@
 #include <time.h>
 #include <stdlib.h>
 #include <arpa/inet.h>
+
+/* write current state to client */
+void write_state(state *);
+
+/* parse "USER anonymouse" to a command struct */
+void parse_command(char *, command *);
+
+/* cmd to id, "USER" -> USER, unknown -> -1 */
+int cmd_to_id(char *);
+
+/* Create a socket to listen [port], and return the socket (-1 for error) */
+int socket_listen(int port);
 
 /* Return a random port for PASV mode */
 int gen_port();

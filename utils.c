@@ -1,5 +1,66 @@
 #include "utils.h"
 
+void write_state(state *st) {
+    st->message[BSIZE - 4] = '\0'; // There must be space for "\r\n"
+    strncat(st->message, "\r\n", 3);
+    if(write(st->sock_control, st->message, strlen(st->message)) == -1) {
+        printf("Error write(): %s(%d)\n", strerror(errno), errno);
+    }
+    // memset(st->message, 0, BSIZE);  // clear the reponse message buffer
+}
+
+void parse_command(char *cmdstr, command *cmd) {
+    // TODO: remove \r\n
+    char *token = strtok(cmdstr, " ");  // split by " "
+    if(token) {
+        strncpy(cmd->code, token, sizeof(cmd->code));
+        cmd->code[sizeof(cmd->code) - 1] = '\0';
+    }
+    token = strtok(NULL, " ");
+    if(token) {
+        strncpy(cmd->arg, token, sizeof(cmd->arg));
+        cmd->arg[sizeof(cmd->arg) - 1] = '\0';
+    }
+}
+
+int cmd_to_id(char *cmd) {
+
+    int total = sizeof(cmdlist_str) / sizeof(cmdlist_str[0]);
+    for(int i = 0; i < total; i++) {
+        if(strncmp(cmd, cmdlist_str[i], sizeof(cmd)) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+int socket_listen(int port) {
+	int sock_listen;
+	struct sockaddr_in addr;
+
+	// init a socket
+	if((sock_listen = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
+		printf("Error socket(): %s(%d)\n", strerror(errno), errno);
+		return -1;
+	}
+	// ip & port
+	memset(&addr, 0, sizeof(addr));
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons(port);
+	addr.sin_addr.s_addr = htonl(INADDR_ANY);	// ip 0.0.0.0
+	// bind
+	if (bind(sock_listen, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
+		printf("Error bind(): %s(%d)\n", strerror(errno), errno);
+		return -1;
+	}
+	// listen
+	if (listen(sock_listen, 10) == -1) {
+		printf("Error listen(): %s(%d)\n", strerror(errno), errno);
+		return -1;
+	}
+    return sock_listen;
+}
+
 int gen_port() {
     srand(time(NULL));
     // between 20000 and 65535

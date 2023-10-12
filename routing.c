@@ -1,113 +1,4 @@
-#include "common.h"
-#include "utils.h"
-
-void write_state(state *st) {
-    st->message[BSIZE - 4] = '\0'; // There must be space for "\r\n"
-    strncat(st->message, "\r\n", 3);
-    if(write(st->sock_control, st->message, strlen(st->message)) == -1) {
-        printf("Error write(): %s(%d)\n", strerror(errno), errno);
-    }
-    // memset(st->message, 0, BSIZE);  // clear the reponse message buffer
-}
-
-int cmd_to_id(char *cmd) {
-
-    int total = sizeof(cmdlist_str) / sizeof(cmdlist_str[0]);
-    for(int i = 0; i < total; i++) {
-        if(strncmp(cmd, cmdlist_str[i], sizeof(cmd)) == 0) {
-            return i;
-        }
-    }
-    return -1;
-}
-
-
-void parse_command(char *cmdstr, command *cmd) {
-    // TODO: remove \r\n
-    char *token = strtok(cmdstr, " ");  // split by " "
-    if(token) {
-        strncpy(cmd->code, token, sizeof(cmd->code));
-        cmd->code[sizeof(cmd->code) - 1] = '\0';
-    }
-    token = strtok(NULL, " ");
-    if(token) {
-        strncpy(cmd->arg, token, sizeof(cmd->arg));
-        cmd->arg[sizeof(cmd->arg) - 1] = '\0';
-    }
-
-    // sscanf(cmdstr, "%s %s", cmd->code, cmd->arg); 
-    /*
-    If use sscanf, here is a bug that code not end with '\0'.
-    For example, cmdstr = "usrnae hello".
-    Because the size of code is 6, and code is just "usrnae" but not end with '\0'.
-    So when you print code, you will get "usrnaehello" because it won't stop until '\0'.
-    */
-}
-
-/* TODO: use thread to process connected socket */
-void sock_process(int connfd) {
-    command cmd;
-    state st;
-    char buf[BSIZE];
-    memset(&cmd, 0, sizeof(cmd));
-    memset(&st, 0, sizeof(st));  // TODO: st.sock should not be 0, which is stdin
-    memset(buf, 0, sizeof(buf));
-    st.sock_control = connfd;
-
-    // welcome
-    // st.message = "220 Anonymous FTP server ready.\n";
-    sprintf(st.message, "220 Anonymous FTP server ready.");
-    write_state(&st);
-
-    // wait for command, read can block
-    while(read(connfd, buf, BSIZE-1)) {
-        printf("%s", buf);
-        int len = strlen(buf);
-        if(len > 1) {   // remove \r\n
-            buf[len-2] = '\0';
-            buf[len-1] = '\0';
-        }
-        parse_command(buf, &cmd);
-        cmd_response(&cmd, &st);
-        memset(buf, 0, sizeof(buf)); // clear buffer
-        memset(&cmd, 0, sizeof(cmd)); // clear cmd
-        // Note: Do not clear state(st)
-    }
-    // TODO: handle EOF & -1
-
-    printf("client closed the connection.\n");
-
-    close(connfd);
-
-}
-
-int socket_listen(int port) {
-	int sock_listen;
-	struct sockaddr_in addr;
-
-	// init a socket
-	if((sock_listen = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
-		printf("Error socket(): %s(%d)\n", strerror(errno), errno);
-		return -1;
-	}
-	// ip & port
-	memset(&addr, 0, sizeof(addr));
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons(port);
-	addr.sin_addr.s_addr = htonl(INADDR_ANY);	// ip 0.0.0.0
-	// bind
-	if (bind(sock_listen, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
-		printf("Error bind(): %s(%d)\n", strerror(errno), errno);
-		return -1;
-	}
-	// listen
-	if (listen(sock_listen, 10) == -1) {
-		printf("Error listen(): %s(%d)\n", strerror(errno), errno);
-		return -1;
-	}
-    return sock_listen;
-}
-
+#include "routing.h"
 
 void cmd_response(command *cmd, state *st) {
     switch (cmd_to_id(cmd->code))
@@ -126,7 +17,6 @@ void cmd_response(command *cmd, state *st) {
     }
 }
 
-/*Handle USER*/
 void cmd_user(command *cmd, state *st) {
     if(!st->user_ok) {
         if(strncmp(cmd->arg, "anonymous", sizeof cmd->arg) == 0) {
@@ -166,6 +56,7 @@ void cmd_pass(command *cmd, state *st) {
     }
     write_state(st);
 }
+
 
 void cmd_pasv(command *cmd, state *st) {
     if(st->is_login) {
@@ -223,7 +114,7 @@ void cmd_pwd(command *cmd, state *st) {
     write_state(st);
 }
 
-// TODO: use data-sock
+
 void cmd_list(command* cmd, state *st) {
     if(st->is_login) {
         if(st->mode == PASSIVE) {

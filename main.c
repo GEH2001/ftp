@@ -1,9 +1,5 @@
 /*func test file*/
 
-#include "common.h"
-
-#include "utils.h"
-
 int main() {
 
     char buf[20] = "ada";
