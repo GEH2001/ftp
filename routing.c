@@ -13,6 +13,9 @@ void cmd_response(command *cmd, state *st) {
     case RMD: cmd_rmd(cmd, st); break;
     case RNFR: cmd_rnfr(cmd, st); break;
     case RNTO: cmd_rnto(cmd, st); break;
+    case SYST: cmd_syst(cmd, st); break;
+    case TYPE: cmd_type(cmd, st); break;
+    case QUIT: cmd_quit(cmd, st); break;
     default:
         sprintf(st->message, "?Invalid command.");
         write_state(st);
@@ -124,6 +127,7 @@ void cmd_list(command* cmd, state *st) {
             close(st->sock_pasv); // stop listening for new connection
             sprintf(st->message, "150 Here comes the directory listing."); // mask
             write_state(st);
+            // TODO: use thread or process
             if(write_list_files(connfd, cmd->arg) == -1) {
                 sprintf(st->message, "451 Server error reading the directory.");
                 write_state(st);
@@ -207,4 +211,36 @@ void cmd_rnto(command *cmd, state *st) {
         sprintf(st->message, "530 Permission denied. First login with USER and PASS.");
     }
     write_state(st); 
+}
+
+void cmd_syst(command *cmd, state *st) {
+    if(st->is_login) {
+        sprintf(st->message, "215 UNIX Type: L8");
+    } else {
+        sprintf(st->message, "530 Permission denied. First login with USER and PASS.");
+    }
+    write_state(st); 
+}
+
+void cmd_type(command *cmd, state *st) {
+    // Todo: This is a fake function, I do nothing about converting transfer mode.
+    if(st->is_login) {
+        sprintf(st->message, "200 Type is set.");
+    } else {
+        sprintf(st->message, "530 Permission denied. First login with USER and PASS.");
+    }
+    write_state(st); 
+}
+
+void cmd_quit(command *cmd, state *st) {
+    if(st->is_login) {
+        sprintf(st->message, "221 Goodbye.");
+    } else {
+        sprintf(st->message, "530 Permission denied. First login with USER and PASS.");
+    }
+    write_state(st);
+    // Todo: sock_pasv?
+    // sock_control is closed in sock_process()
+    close(st->sock_pasv);
+    close(st->sock_data);
 }
