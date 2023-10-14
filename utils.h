@@ -16,6 +16,9 @@
 #include <stdlib.h>
 #include <arpa/inet.h>
 
+#include <fcntl.h> // open
+#include <sys/stat.h> // struct stat
+
 /* write current state to client */
 void write_state(state *);
 
@@ -49,8 +52,17 @@ int get_ip(int sockfd, int *ip);
 */
 int write_list_files(int sock_data, const char *path);
 
-/* Return 1 if visible, else 0 */
+/* For LIST: Return 1 if the file or directory visible, else 0 */
 int is_file_visiable(const char *path);
 
-/* Rename oldfile to newfile, return -1 for errors, else 0 */
-int rn_file(const char *oldfile, const char *newfile);
+/* Send a file to the client over data connection */
+int send_file(int sock_data, const char *path);
+
+/** Create data connection for PORT & PASV
+ *  Return -1 for errors, otherwise 0.
+ *  Set st->sock_data to the data socket built by PORT or PASV.
+ */
+int create_data_conn(state *st);
+
+/* Safely close the socket in case the standard stream is closed */
+void close_safely(int sock_fd);

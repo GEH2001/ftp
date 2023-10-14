@@ -58,7 +58,6 @@ void server(int port, char *root) {
 			printf("Error accept(): %s(%d)\n", strerror(errno), errno);
 			continue;
 		}
-		
 		// TODO: multi-thread
 		sock_process(sock_control);
 	}

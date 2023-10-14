@@ -7,27 +7,13 @@
 #include <errno.h>
 #include <unistd.h>
 int main() {
-
-
-    int res = rename(".", "hello");
-    if(res != 0) {
-        printf("%s(%d)\n", strerror(errno), errno);
+    int ip[6];
+    int cd[6];
+    int c = sscanf("127,136,15,6,7,44", "%d,%d,%d,%d,%d,%d", &ip[0], &ip[1],&ip[2],&ip[3],&ip[4],&ip[5]);
+    memcpy(cd, ip, sizeof cd);
+    for(int i = 0; i < 6; i++) {
+        printf("%d ", cd[i]);
     }
-
-    if(access(".gitignore", R_OK) != -1) {
-        printf("exist\n");
-    } else {
-        printf("not exist\n");
-    }
-
-    printf("%d\n", is_file_visiable(""));
-    printf("%d\n", is_file_visiable("."));
-    printf("%d\n", is_file_visiable(".."));
-    printf("%d\n", is_file_visiable("main.c"));
-    printf("%d\n", is_file_visiable("hello"));
-    printf("%d\n", is_file_visiable(".gitignore"));
-    printf("%d\n", is_file_visiable("./main.c"));
-    printf("%d\n", is_file_visiable("/home/geh"));
-
+    printf("\n%ld\n", sizeof cd);
     return 0;
 }

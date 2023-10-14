@@ -5,9 +5,11 @@ void cmd_response(command *cmd, state *st) {
     {
     case USER: cmd_user(cmd, st); break;
     case PASS: cmd_pass(cmd, st); break;
+    case PORT: cmd_port(cmd, st); break;
     case PASV: cmd_pasv(cmd, st); break;
     case CWD: cmd_cwd(cmd, st); break;
     case PWD: cmd_pwd(cmd, st); break;
+    case NLST:
     case LIST: cmd_list(cmd, st); break;
     case MKD: cmd_mkd(cmd, st); break;
     case RMD: cmd_rmd(cmd, st); break;
@@ -16,6 +18,7 @@ void cmd_response(command *cmd, state *st) {
     case SYST: cmd_syst(cmd, st); break;
     case TYPE: cmd_type(cmd, st); break;
     case QUIT: cmd_quit(cmd, st); break;
+    case RETR: cmd_retr(cmd, st); break;
     default:
         sprintf(st->message, "?Invalid command.");
         write_state(st);
@@ -57,15 +60,30 @@ void cmd_pass(command *cmd, state *st) {
     write_state(st);
 }
 
+void cmd_port(command *cmd, state *st) {
+    if(st->is_login) {
+        int ip[6] = {0};
+        if(sscanf(cmd->arg, "%d,%d,%d,%d,%d,%d", &ip[0],&ip[1],&ip[2],&ip[3],&ip[4],&ip[5]) == 6) {
+            sprintf(st->message, "200 Entering activate mode.");
+            st->mode = STANDARD;
+            memcpy(st->pt_addr, ip, sizeof ip);
+        } else {
+            sprintf(st->message, "500 Usage: PORT h1,h2,h3,h4,p1,p2");
+        }
+    } else {
+        sprintf(st->message, "530 Permission denied. First login with USER and PASS.");
+    }
+    write_state(st);
+}
+
 
 void cmd_pasv(command *cmd, state *st) {
     if(st->is_login) {
         if(strlen(cmd->arg) != 0) {
             sprintf(st->message, "504 PASV parameters are prohibited. %s", cmd->arg);
         } else {
-            // close previous passive socket
-            // TODO: previous port socket ?
-            close(st->sock_pasv);
+            close_safely(st->sock_pasv); //Stop listening for connections on the old port.
+            close_safely(st->sock_data); //Drop any connections already made.
             int port = gen_port();
             int p1 = port / 256;
             int p2 = port % 256;
@@ -74,7 +92,7 @@ void cmd_pasv(command *cmd, state *st) {
             int sockfd = socket_listen(port);   // TODO: return -1
             st->sock_pasv = sockfd;
             st->mode = PASSIVE;
-            sprintf(st->message, "227 =%d,%d,%d,%d,%d,%d", ip[0], ip[1], ip[2], ip[3], p1, p2);
+            sprintf(st->message, "227 =%d,%d,%d,%d,%d,%d Entering Passive Mode.", ip[0], ip[1], ip[2], ip[3], p1, p2);
         }
     } else {
         sprintf(st->message, "530 Permission denied. First login with USER and PASS.");
@@ -113,37 +131,40 @@ void cmd_pwd(command *cmd, state *st) {
 }
 
 
-void cmd_list(command* cmd, state *st) {
+void cmd_list(command *cmd, state *st) {
     if(st->is_login) {
-        if(st->mode == PASSIVE) {
-            char buf[BSIZE];
-            int connfd;
-            if((connfd = accept(st->sock_pasv, NULL, NULL)) == -1) {
-                perror("Error accept()");
-                sprintf(st->message, "Server error");   // TODO: Server error
-                write_state(st);
-                return;
-            }
-            close(st->sock_pasv); // stop listening for new connection
-            sprintf(st->message, "150 Here comes the directory listing."); // mask
-            write_state(st);
-            // TODO: use thread or process
-            if(write_list_files(connfd, cmd->arg) == -1) {
-                sprintf(st->message, "451 Server error reading the directory.");
-                write_state(st);
-                return;
-            } // TODO: 426 error
-            sprintf(st->message, "226 Directory send OK.");
-            close(connfd);
-            st->mode = NORMAL;
-        } else {
+        // establish data connection
+        if(create_data_conn(st) != 0) {
             sprintf(st->message, "425 Use PASV or PORT to establish a data connection.");
+            write_state(st);
+            return;
+        }
+        sprintf(st->message, "150 Here comes the directory listing."); // mask
+        write_state(st);
+        int err_code = write_list_files(st->sock_data, cmd->arg);
+        close_safely(st->sock_data);    // close the data connection
+        switch (err_code)
+        {
+        case 0:
+            sprintf(st->message, "226 Directory send OK.");
+            break;
+        case -1:
+            sprintf(st->message, "451 Server had trouble reading the directory from disk.");
+            break;
+        case -2:
+            sprintf(st->message, "426 TCP connection was broken.");
+            break;
+        default:
+            sprintf(st->message, "550 Something wrong.");
+            break;
         }
     } else {
         sprintf(st->message, "530 Permission denied. First login with USER and PASS.");
     }
     write_state(st);
 }
+
+
 
 void cmd_mkd(command *cmd, state *st) {
     if(st->is_login) {
@@ -241,6 +262,46 @@ void cmd_quit(command *cmd, state *st) {
     write_state(st);
     // Todo: sock_pasv?
     // sock_control is closed in sock_process()
-    close(st->sock_pasv);
-    close(st->sock_data);
+    close_safely(st->sock_pasv);
+    close_safely(st->sock_data);
+}
+
+
+void cmd_retr(command *cmd, state *st) {
+    if(st->is_login) {
+        // establish data connection
+        if(create_data_conn(st) != 0) {
+            sprintf(st->message, "425 Use PASV or PORT to establish a data connection.");
+            write_state(st);
+            return;
+        }
+        sprintf(st->message, "150 Opening BINARY mode data connection for %s", cmd->arg); // mask
+        write_state(st);
+        int err_code = send_file(st->sock_data, cmd->arg);
+        close_safely(st->sock_data); // close the data connection
+        switch (err_code)
+        {
+        case 0:
+            sprintf(st->message, "226 Transfer complete.");
+            break;
+        case -1:
+            sprintf(st->message, "550 Invalid path.");
+            break;
+        case -2:
+            sprintf(st->message, "550 Not a common file, maybe directory.");
+            break;
+        case -3:
+            sprintf(st->message, "426 TCP connection was broken.");
+            break;
+        case -4:
+            sprintf(st->message, "451 Server had a trouble reading the file.");           
+            break;
+        default:
+            sprintf(st->message, "550 Something wrong.");
+            break;
+        }
+    } else {
+        sprintf(st->message, "530 Permission denied. First login with USER and PASS.");
+    }
+    write_state(st);
 }

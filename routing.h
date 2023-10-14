@@ -25,7 +25,7 @@
 void cmd_response(command *, state *);
 void cmd_user(command *, state *);
 void cmd_pass(command *, state *);
-void cmd_port(command *, state *); // TODO
+void cmd_port(command *, state *);
 void cmd_pasv(command *, state *);
 void cmd_cwd(command *, state *);
 void cmd_pwd(command *, state *);
@@ -37,3 +37,4 @@ void cmd_rnto(command *, state *);
 void cmd_syst(command *, state *);
 void cmd_type(command *, state *);
 void cmd_quit(command *, state *);
+void cmd_retr(command *, state *);

@@ -102,7 +102,7 @@ int get_ip(int sockfd, int *ip) {
     struct sockaddr_in addr;
     socklen_t addr_size = sizeof(addr);
     if(getsockname(sockfd, (struct sockaddr*)&addr, &addr_size) == -1) {
-        perror("Error: getsockname()\n");
+        perror("Error: getsockname()");
         return -1;  // failed
     }
     char buf[20];
@@ -133,7 +133,7 @@ int write_list_files(int sock_data, const char *path) {
         strncat(buf, "\r\n", 3);
         if(write(sock_data, buf, sizeof buf) == -1) {
             printf("Error write(): %s(%d)\n", strerror(errno), errno);
-            return -1;
+            return -2;
         }
         memset(buf, 0, sizeof buf); 
         // clear the buffer before next, otherwise there will be some error like: WARNING! 3 bare linefeeds received in ASCII mode.
@@ -160,4 +160,92 @@ int is_file_visiable(const char *path) {
         }
     }
     return 0;
+}
+
+int send_file(int sock_data, const char *path) {
+    int file_fd = open(path, O_RDONLY);
+    if(file_fd == -1) {
+        perror("Failed to open file");
+        return -1;
+    }
+    struct stat file_stat;
+    if(fstat(file_fd, &file_stat) == -1) {
+        perror("Failed to get file status");
+        close(file_fd);
+        return -1;
+    }
+    // check if this is a file
+    if(S_ISREG(file_stat.st_mode) == 0) {
+        close(file_fd);
+        return -2;
+    }
+    // file_stat.st_size
+    char buf[BSIZE];
+    memset(buf, 0, BSIZE);
+
+    ssize_t bytes_read = 0, bytes_written = 0, total = 0;
+    while((bytes_read=read(file_fd, buf, BSIZE)) > 0) {
+        bytes_written = write(sock_data, buf, bytes_read);
+        total += bytes_written;
+        if(bytes_written < 0) {
+            perror("Failed to write to socket");
+            close(file_fd);
+            return -3;
+        }
+        memset(buf, 0, BSIZE);
+    }
+    close(file_fd);
+    if(bytes_read == -1) { // read errors
+        return -4;
+    }
+    // printf("origin: %ld, total: %ld\n", file_stat.st_size, total);
+    return 0;
+}
+
+
+int create_data_conn(state *st) {
+    if(st->mode == PASSIVE) {   // PASV
+        int connfd;
+        if((connfd=accept(st->sock_pasv, NULL, NULL)) == -1) {
+            perror("create_data_conn(): Error accept()");
+            return -1;
+        }
+        close_safely(st->sock_pasv); // stop accepting new connections
+        st->sock_data = connfd;
+    }
+
+    if(st->mode == STANDARD) {  // PORT
+        int port = st->pt_addr[4] * 256 + st->pt_addr[5];
+        char ip[256];
+        memset(ip, 0, sizeof ip);
+        sprintf(ip, "%d.%d.%d.%d", st->pt_addr[0], st->pt_addr[1], st->pt_addr[2], st->pt_addr[3]);
+        int sockfd;
+        struct sockaddr_in addr;
+        if((sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
+            perror("Error socket() within create_data_conn()");
+            return -1;
+        }
+        memset(&addr, 0, sizeof(addr));
+        addr.sin_family = AF_INET;
+        addr.sin_port = htons(port);
+        if(inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr) <= 0) {
+            perror("Error inet_pton() within create_data_conn()");
+            return -1;
+        }
+    	if (connect(sockfd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+            perror("Error connect() within create_data_conn()");
+            return -1;
+	    }
+        st->sock_data = sockfd;
+    }
+
+    return 0;
+}
+
+
+void close_safely(int sock_fd) {
+    // stdin=0, stdout=1, stderr=2
+    if(sock_fd != 0 && sock_fd != 1 && sock_fd != 2) {
+        close(sock_fd);
+    }
 }
