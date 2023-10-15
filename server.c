@@ -14,8 +14,9 @@ void sock_process(int connfd) {
     state st;
     char buf[BSIZE];
     memset(&cmd, 0, sizeof(cmd));
-    memset(&st, 0, sizeof(st));  // TODO: st.sock should not be 0, which is stdin
+    memset(&st, 0, sizeof(st));
     memset(buf, 0, sizeof(buf));
+    st.sock_data = st.sock_pasv = -1;   // 0 is stdin, may cause some errors
     st.sock_control = connfd;
 
     // welcome
@@ -62,8 +63,7 @@ void server(int port, char *root) {
 		sock_process(sock_control);
 	}
 	close(sock_listen);
-	// TODO: Can not close if the program exit in while(1) above.
-	// TODO: atexit(close all socket)
+	// TODO: Can not close if the program exit in while(1) above. atexit or signal may help
 }
 
 

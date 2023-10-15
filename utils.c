@@ -10,7 +10,6 @@ void write_state(state *st) {
 }
 
 void parse_command(char *cmdstr, command *cmd) {
-    // TODO: remove \r\n
     char *token = strtok(cmdstr, " ");  // split by " "
     if(token) {
         strncpy(cmd->code, token, sizeof(cmd->code));

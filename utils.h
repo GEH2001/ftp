@@ -22,7 +22,10 @@
 /* write current state to client */
 void write_state(state *);
 
-/* parse "USER anonymouse" to a command struct */
+/**
+ * Parse "USER anonymouse" to a command struct
+ * Remove \r\n before the function
+*/
 void parse_command(char *, command *);
 
 /* cmd to id, "USER" -> USER, unknown -> -1 */

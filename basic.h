@@ -19,7 +19,6 @@ typedef struct state
     char rn_from[256];      // for RNFR, rename from
     int last_verb;          // for RNTO, the verb of the last command, USER PASS RNFR RNTO etc.
 } state;
-// TODO: socket should not be inited with 0
 
 /**
  * PASSIVE: Passive mode,   server(20) -> client(>1024)

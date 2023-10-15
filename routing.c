@@ -88,8 +88,12 @@ void cmd_pasv(command *cmd, state *st) {
             int p1 = port / 256;
             int p2 = port % 256;
             int ip[4] = {0, 0, 0, 0};
-            get_ip(st->sock_control, ip); // TODO: return -1
-            int sockfd = socket_listen(port);   // TODO: return -1
+            int sockfd = -1;
+            if(get_ip(st->sock_control, ip) == -1 || (sockfd = socket_listen(port)) == -1){
+                sprintf(st->message, "450 Something wrong, try again.");
+                write_state(st);
+                return;
+            }
             st->sock_pasv = sockfd;
             st->mode = PASSIVE;
             sprintf(st->message, "227 =%d,%d,%d,%d,%d,%d Entering Passive Mode.", ip[0], ip[1], ip[2], ip[3], p1, p2);
@@ -120,7 +124,7 @@ void cmd_pwd(command *cmd, state *st) {
         memset(buf, 0, sizeof(buf));
         if(getcwd(buf, 256) == NULL) {
             perror("Error getcwd()");
-            sprintf(st->message, "Server error"); // TODO: status code
+            sprintf(st->message, "450 Something wrong, try again.");
         } else {
             sprintf(st->message, "257 \"%s\"", buf);
         }
@@ -260,7 +264,6 @@ void cmd_quit(command *cmd, state *st) {
         sprintf(st->message, "530 Permission denied. First login with USER and PASS.");
     }
     write_state(st);
-    // Todo: sock_pasv?
     // sock_control is closed in sock_process()
     close_safely(st->sock_pasv);
     close_safely(st->sock_data);
