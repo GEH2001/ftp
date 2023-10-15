@@ -249,3 +249,36 @@ void close_safely(int sock_fd) {
         close(sock_fd);
     }
 }
+
+int recv_file(int sock_data, const char *path) {
+    // parse file name, "./send.txt" -> "send.txt"
+    const char *filename = strrchr(path, '/');
+    if(filename != NULL) {
+        filename++;
+    } else {
+        filename = path;
+    }
+    int file_fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+    if(file_fd == -1) {
+        perror("Error open() inside recv_file()");
+        return -1;
+    }
+    char buf[BSIZE];
+    memset(buf, 0, BSIZE);
+    ssize_t bytes_read = 0, bytes_written = 0;
+    while ((bytes_read = read(sock_data, buf, BSIZE)) > 0)
+    {
+        bytes_written = write(file_fd, buf, bytes_read);
+        if(bytes_written == -1) {
+            perror("Error write() inside recv_file()");
+            return -1;
+        }
+        memset(buf, 0, BSIZE);
+    }
+    if(bytes_read == -1) {
+        perror("Error read() inside recv_file()");
+        return -2;
+    }
+    close(file_fd);
+    return 0;
+}

@@ -8,16 +8,16 @@
 /* the state of the connection between client and server */
 typedef struct state
 {
-    int sock_control;     // the control socket for the server
-    int sock_data;        // the data socket for the server
-    char message[BSIZE];  // response message to client
-    int user_ok;          // is user allowed? (only anonymous)
-    int is_login;         // is user logged in?
-    int mode;             // default standard(port)
-    int pt_addr[6];     // PORT address(h1,h2,h3,h4,p1,p2)
-    int sock_pasv;        // created by PASV, listening for data connection
-    char rn_from[256];     // for RNFR, rename from
-    int last_verb;        // The verb of the last command, USER PASS RNFR RNTO etc.
+    int sock_control;       // the control socket for the server
+    int sock_data;          // the data socket for the server
+    char message[BSIZE];    // response message to client
+    int user_ok;            // is user allowed? (only anonymous)
+    int is_login;           // is user logged in?
+    int mode;               // default standard(port)
+    int pt_addr[6];         // PORT address(h1,h2,h3,h4,p1,p2)
+    int sock_pasv;          // created by PASV, listening for data connection
+    char rn_from[256];      // for RNFR, rename from
+    int last_verb;          // for RNTO, the verb of the last command, USER PASS RNFR RNTO etc.
 } state;
 // TODO: socket should not be inited with 0
 
@@ -26,7 +26,7 @@ typedef struct state
  * STANDARD: Default mode,  server(>1024) <- client(>1024) 
 */
 enum mode {
-    NORMAL, STANDARD, PASSIVE
+    STANDARD, PASSIVE
 };
 
 /* commands from clients, such as: USER anonymous */
@@ -40,10 +40,10 @@ typedef struct command {
 /* Used by cmd_to_id */
 typedef enum cmdlist {
     USER, PASS, RETR, STOR, QUIT, SYST, TYPE, PORT, 
-    PASV, MKD, CWD, PWD, LIST, NLST, RMD, RNFR, RNTO
+    PASV, MKD, CWD, PWD, LIST, RMD, RNFR, RNTO
 } cmdlist;
 
 static const char *cmdlist_str[] = {
     "USER", "PASS", "RETR", "STOR", "QUIT", "SYST", "TYPE", "PORT", 
-    "PASV", "MKD", "CWD", "PWD", "LIST", "NLST", "RMD", "RNFR", "RNTO"
+    "PASV", "MKD", "CWD", "PWD", "LIST", "RMD", "RNFR", "RNTO"
 };

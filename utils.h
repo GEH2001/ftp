@@ -66,3 +66,8 @@ int create_data_conn(state *st);
 
 /* Safely close the socket in case the standard stream is closed */
 void close_safely(int sock_fd);
+
+/** Read contents from sock_data and write it into path.
+ *  Return -1 for errors, otherwise 0
+ */
+int recv_file(int sock_data, const char *path);

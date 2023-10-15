@@ -6,8 +6,5 @@ client: client.c
 server: server.c utils.c routing.c
 	gcc -o server server.c utils.c routing.c
 
-main: main.c utils.c
-	gcc -o main main.c utils.c
-
 clean:
-	rm client server main
+	rm client server

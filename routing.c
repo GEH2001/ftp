@@ -9,7 +9,6 @@ void cmd_response(command *cmd, state *st) {
     case PASV: cmd_pasv(cmd, st); break;
     case CWD: cmd_cwd(cmd, st); break;
     case PWD: cmd_pwd(cmd, st); break;
-    case NLST:
     case LIST: cmd_list(cmd, st); break;
     case MKD: cmd_mkd(cmd, st); break;
     case RMD: cmd_rmd(cmd, st); break;
@@ -19,6 +18,7 @@ void cmd_response(command *cmd, state *st) {
     case TYPE: cmd_type(cmd, st); break;
     case QUIT: cmd_quit(cmd, st); break;
     case RETR: cmd_retr(cmd, st); break;
+    case STOR: cmd_stor(cmd, st); break;
     default:
         sprintf(st->message, "?Invalid command.");
         write_state(st);
@@ -298,6 +298,39 @@ void cmd_retr(command *cmd, state *st) {
             break;
         default:
             sprintf(st->message, "550 Something wrong.");
+            break;
+        }
+    } else {
+        sprintf(st->message, "530 Permission denied. First login with USER and PASS.");
+    }
+    write_state(st);
+}
+
+void cmd_stor(command *cmd, state *st) {
+    if(st->is_login) {
+        // establish data connection
+        if(create_data_conn(st) != 0) {
+            sprintf(st->message, "425 Use PASV or PORT to establish a data connection.");
+            write_state(st);
+            return;
+        }
+        sprintf(st->message, "150 Ready for receiving file."); // mask
+        write_state(st);
+        int error_code = recv_file(st->sock_data, cmd->arg);
+        close_safely(st->sock_data);
+        switch (error_code)
+        {
+        case 0:
+            sprintf(st->message, "226 Successfully stored.");
+            break;
+        case -1:
+            sprintf(st->message, "451 Server had a trouble saving the file.");
+            break;
+        case -2:
+            sprintf(st->message, "426 TCP connection was broken.");
+            break;
+        default:
+            sprintf(st->message, "552 Something wrong.");
             break;
         }
     } else {
