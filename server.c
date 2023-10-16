@@ -7,7 +7,8 @@
 #include "pthread.h"
 
 void sock_process(int connfd);
-void server(int port, char *root);
+void *conn_handler(void *sock_desc);
+void server(int port);
 
 /* Process connected socket for coming client */
 void sock_process(int connfd) {
@@ -85,7 +86,7 @@ void *conn_handler(void *sock_desc) {
     close(connfd);
 }
 
-void server(int port, char *root) {
+void server(int port) {
 	int sock_listen, sock_control;
 	struct sockaddr_in addr;
 
@@ -113,10 +114,51 @@ void server(int port, char *root) {
 
 
 int main(int argc, char **argv) {
-	
-	// TODO: check whether is port from argv available or not
-	server(6789, ".");
-	// server(34074, ".");
+	// parse port and root from args
+    int port = 0;
+    char *root = NULL;
+    for(int i = 1; i < argc; i++) {
+        if(strcmp(argv[i], "-port") == 0) {
+            if(i + 1 < argc) {
+                port = atoi(argv[++i]);
+            } else {
+                printf("usage: -port n\n");
+                return -1;
+            }
+        } else if (strcmp(argv[i], "-root") == 0) {
+            if(i + 1 < argc) {
+                root = argv[++i];
+            } else {
+                printf("usage: -root /path\n");
+                return -1;
+            }
+        } else {
+            printf("usage: -port n -root /path\n");
+            return -1;
+        }
+    }
+
+    if(port == 0) {
+        port = 21;
+        printf("port is set to default 21\n");
+    } else {
+        if(!port_available(port)) {
+            printf("port %d is being used, set to default 21", port);
+        } else {
+            printf("port is set to %d\n", port);
+        }
+    }
+    
+    if(root == NULL) {
+        root = "/tmp";
+    }
+    if(chdir(root) == -1) {
+        perror("Failed to change working dir");
+    } else {
+        printf("Working dir is set to %s\n", root);
+    }
+
+	server(port);
 
 	exit(0);
 }

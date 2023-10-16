@@ -42,6 +42,7 @@ Use orginal ftp tool to connect the server.
 
 ## TODO
 - Consider thread synchronization to prevent resource competition inside `conn_handler`
+- Resume transmission after connection terminated (REST)
 
 
 ## Reference
