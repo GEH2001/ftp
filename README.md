@@ -17,28 +17,16 @@ net is always big endian, but host is uncertain(mostly little endian)
 Because of the big endian and little endian, byte ordering is staple.
 
 
-[Ifilework](https://code.google.com/archive/p/ifilework/)
-
-Ifilework is a project to develop a client and server ftp in C language using sockets api.
-
-Just search "ftp server in c" in Google, you will find some helpful results.
-
-
 [List of raw FTP commands](http://www.nsftools.com/tips/RawFTP.htm)
 
-[How FTP actually works in practice](http://cr.yp.to/ftp.html)
-- Look at the 1st session, which contains the **format of request and response**, such as the ending character.
 
 
-Public FTP Server:
+## Public FTP Server:
 - ftp.gnu.org (anonymous only)
 - ftp.acc.umu.se
 
-[RFC 959](https://www.w3.org/Protocols/rfc959/)
-- End-of-Line: \r\n
 
-
-Fixed BUGs
+## Fixed BUGs
 - Blocked in the `while(1)` loop when read, because there is no '\n' from server.
 - All the buffers such as cmd and state.message should be reset to 0 before next write.
 - Use `htons` to set port, otherwise you get port 34074(0x851A) when you set port 6789(0x1A85).
@@ -51,3 +39,16 @@ In fact, stdin is 0 and stdout is 1, so I should not close the standard file des
 
 Use orginal ftp tool to connect the server.
 - open 127.0.0.1 6789
+
+## TODO
+- Consider thread synchronization to prevent resource competition inside `conn_handler`
+
+
+## Reference
+- [How FTP actually works in practice](http://cr.yp.to/ftp.html)
+- [RFC 959](https://www.w3.org/Protocols/rfc959/)
+- [Socket Programming in C/C++](https://www.geeksforgeeks.org/socket-programming-cc/)
+- [Socket Programming in C/C++: Handling multiple clients on server without multi-threading](https://www.geeksforgeeks.org/socket-programming-in-cc-handling-multiple-clients-on-server-without-multi-threading/)
+- [Sockets(The GNU C Library)](https://www.gnu.org/software/libc/manual/html_node/Sockets.html)
+- [Wiki: Berkeley Sockets API](https://en.wikipedia.org/wiki/Berkeley_sockets)
+- [Ifilework](https://code.google.com/archive/p/ifilework/) is a project to develop a client and server ftp in C language using sockets api.

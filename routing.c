@@ -17,6 +17,7 @@ void cmd_response(command *cmd, state *st) {
     case SYST: cmd_syst(cmd, st); break;
     case TYPE: cmd_type(cmd, st); break;
     case QUIT: cmd_quit(cmd, st); break;
+    case ABOR: cmd_quit(cmd, st); break;
     case RETR: cmd_retr(cmd, st); break;
     case STOR: cmd_stor(cmd, st); break;
     default:

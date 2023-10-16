@@ -39,10 +39,10 @@ typedef struct command {
 /* Used by cmd_to_id */
 typedef enum cmdlist {
     USER, PASS, RETR, STOR, QUIT, SYST, TYPE, PORT, 
-    PASV, MKD, CWD, PWD, LIST, RMD, RNFR, RNTO
+    PASV, MKD, CWD, PWD, LIST, RMD, RNFR, RNTO, ABOR
 } cmdlist;
 
 static const char *cmdlist_str[] = {
     "USER", "PASS", "RETR", "STOR", "QUIT", "SYST", "TYPE", "PORT", 
-    "PASV", "MKD", "CWD", "PWD", "LIST", "RMD", "RNFR", "RNTO"
+    "PASV", "MKD", "CWD", "PWD", "LIST", "RMD", "RNFR", "RNTO", "ABOR"
 };
