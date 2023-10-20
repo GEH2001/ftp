@@ -251,7 +251,11 @@ void cmd_syst(command *cmd, state *st) {
 void cmd_type(command *cmd, state *st) {
     // Todo: This is a fake function, I do nothing about converting transfer mode.
     if(st->is_login) {
-        sprintf(st->message, "200 Type is set.");
+        if(strcmp(cmd->arg, "A") == 0) {
+            sprintf(st->message, "200 Type set to A.");
+        } else {
+            sprintf(st->message, "200 Type set to I.");
+        }
     } else {
         sprintf(st->message, "530 Permission denied. First login with USER and PASS.");
     }
