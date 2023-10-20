@@ -19,8 +19,9 @@ typedef struct state
     char rn_from[256];      // for RNFR, rename from
     int last_verb;          // for RNTO, the verb of the last command, USER PASS RNFR RNTO etc.
     int rest_pos;           // for REST, restart position for RETR and STOR
+    char path[256];         // for thread RETR and STOR, file path
 } state;
-// last_verb, rest_pos maintained in cmd_response()
+
 
 /**
  * PASSIVE: Passive mode,   server(20) -> client(>1024)

@@ -21,7 +21,8 @@ void cmd_response(command *cmd, state *st) {
     case TYPE: cmd_type(cmd, st); break;
     case QUIT: cmd_quit(cmd, st); break;
     case ABOR: cmd_quit(cmd, st); break;
-    case RETR: cmd_retr(cmd, st); break;
+    // case RETR: cmd_retr(cmd, st); break;
+    case RETR: cmd_retr_thread(cmd, st); break;
     case STOR: cmd_stor(cmd, st); break;
     case REST: cmd_rest(cmd, st); break;
     default:
@@ -319,6 +320,33 @@ void cmd_retr(command *cmd, state *st) {
     }
     write_state(st);
 }
+
+void cmd_retr_thread(command *cmd, state *st) {
+    if(!st->is_login) {
+        sprintf(st->message, "530 Permission denied. First login with USER and PASS.");
+        write_state(st);
+        return;
+    }
+    if(create_data_conn(st) != 0) {
+        sprintf(st->message, "425 Use PASV or PORT to establish a data connection.");
+        write_state(st);
+        return;
+    }
+    sprintf(st->message, "150 Opening BINARY mode data connection for %s", cmd->arg); // mask
+        write_state(st);
+    if(st->last_verb != REST)   // Only when STOR follows by REST, will rest_pos work
+        st->rest_pos = 0;
+    state *temp = (state*) malloc(sizeof(state));
+    memcpy(temp, st, sizeof(state));
+    memset(temp->path, 0, sizeof temp->path);
+    strncpy(temp->path, cmd->arg, sizeof cmd->arg);
+    // use thread to transfer data
+    pthread_t thread_id;
+    pthread_create(&thread_id, NULL, send_file_thread, (void*) temp);
+    pthread_detach(thread_id);
+}
+
+
 
 void cmd_stor(command *cmd, state *st) {
     if(st->is_login) {

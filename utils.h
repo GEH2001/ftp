@@ -19,6 +19,8 @@
 #include <fcntl.h> // open
 #include <sys/stat.h> // struct stat
 
+#include <pthread.h>
+
 /* write current state to client */
 void write_state(state *);
 
@@ -62,6 +64,11 @@ int is_file_visiable(const char *path);
  *  @param rest_pos restart position from REST
  */
 int send_file(int sock_data, const char *path, int rest_pos);
+
+/**
+ * Thread function to send file
+*/
+void *send_file_thread(void* _st);
 
 /** Create data connection for PORT & PASV
  *  Return -1 for errors, otherwise 0.

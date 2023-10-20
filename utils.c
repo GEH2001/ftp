@@ -207,6 +207,36 @@ int send_file(int sock_data, const char *path, int rest_pos) {
     return 0;
 }
 
+void *send_file_thread(void* _st) {
+    state* st = (state*) _st;
+    int err_code = send_file(st->sock_data, st->path, st->rest_pos);
+    close_safely(st->sock_data);
+    switch (err_code)
+    {
+    case 0:
+        sprintf(st->message, "226 Transfer complete.");
+        break;
+    case -1:
+        sprintf(st->message, "550 Invalid path.");
+        break;
+    case -2:
+        sprintf(st->message, "550 Not a common file, maybe directory.");
+        break;
+    case -3:
+        sprintf(st->message, "426 TCP connection was broken.");
+        break;
+    case -4:
+        sprintf(st->message, "451 Server had a trouble reading the file.");           
+        break;
+    default:
+        sprintf(st->message, "550 Something wrong.");
+        break;
+    }
+    
+    write_state(st);
+    free(st);   // must
+    pthread_exit(0);
+}
 
 int create_data_conn(state *st) {
     if(st->mode == PASSIVE) {   // PASV
