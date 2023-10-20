@@ -106,7 +106,7 @@ void server(int port) {
             return;
         }
         // pthread_join(thread_id, NULL);   // this can block
-        pthread_detach(thread_id);  // mark thread as detach, convenient to recycle thread resources
+        pthread_detach(thread_id);  // mark thread as detach, auto recycle thread resources when thread program end
 	}
 	close(sock_listen);
 	// TODO: Can not close if the program exit in while(1) above. atexit or signal may help

@@ -58,8 +58,10 @@ int write_list_files(int sock_data, const char *path);
 /* For LIST: Return 1 if the file or directory visible, else 0 */
 int is_file_visiable(const char *path);
 
-/* Send a file to the client over data connection */
-int send_file(int sock_data, const char *path);
+/** Send a file to the client over data connection
+ *  @param rest_pos restart position from REST
+ */
+int send_file(int sock_data, const char *path, int rest_pos);
 
 /** Create data connection for PORT & PASV
  *  Return -1 for errors, otherwise 0.
@@ -72,5 +74,6 @@ void close_safely(int sock_fd);
 
 /** Read contents from sock_data and write it into path.
  *  Return -1 for errors, otherwise 0
+ *  @param rest_pos restart position from REST
  */
-int recv_file(int sock_data, const char *path);
+int recv_file(int sock_data, const char *path, int rest_pos);

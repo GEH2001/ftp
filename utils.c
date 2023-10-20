@@ -161,7 +161,7 @@ int is_file_visiable(const char *path) {
     return 0;
 }
 
-int send_file(int sock_data, const char *path) {
+int send_file(int sock_data, const char *path, int rest_pos) {
     int file_fd = open(path, O_RDONLY);
     if(file_fd == -1) {
         perror("Failed to open file");
@@ -179,6 +179,12 @@ int send_file(int sock_data, const char *path) {
         return -2;
     }
     // file_stat.st_size
+    // rest: seek position
+    if (lseek(file_fd, rest_pos, SEEK_SET) == -1) {
+        perror("Error lseek() inside send_file()");
+        close(file_fd);
+        return -4;
+    }
     char buf[BSIZE];
     memset(buf, 0, BSIZE);
 
@@ -197,7 +203,7 @@ int send_file(int sock_data, const char *path) {
     if(bytes_read == -1) { // read errors
         return -4;
     }
-    // printf("origin: %ld, total: %ld\n", file_stat.st_size, total);
+
     return 0;
 }
 
@@ -249,7 +255,7 @@ void close_safely(int sock_fd) {
     }
 }
 
-int recv_file(int sock_data, const char *path) {
+int recv_file(int sock_data, const char *path, int rest_pos) {
     // parse file name, "./send.txt" -> "send.txt"
     const char *filename = strrchr(path, '/');
     if(filename != NULL) {
@@ -257,11 +263,21 @@ int recv_file(int sock_data, const char *path) {
     } else {
         filename = path;
     }
-    int file_fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+    int file_fd = -1;
+    if(rest_pos == 0) {
+        // O_WRONLY: allow write and read;  O_CREAT: create if file not exist;
+        // O_TRUNC: clear if file exist; O_APPEND: write to the end of the file(auto seek end)
+        file_fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+    } else {
+        // handle REST: just append to the file
+        file_fd = open(filename, O_WRONLY | O_APPEND | O_CREAT, 0666);
+    }
     if(file_fd == -1) {
         perror("Error open() inside recv_file()");
         return -1;
     }
+    // not needed, because open mode is APPEND
+    // lseek(file_fd, 0, SEEK_END);
     char buf[BSIZE];
     memset(buf, 0, BSIZE);
     ssize_t bytes_read = 0, bytes_written = 0;

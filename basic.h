@@ -18,7 +18,9 @@ typedef struct state
     int sock_pasv;          // created by PASV, listening for data connection
     char rn_from[256];      // for RNFR, rename from
     int last_verb;          // for RNTO, the verb of the last command, USER PASS RNFR RNTO etc.
+    int rest_pos;           // for REST, restart position for RETR and STOR
 } state;
+// last_verb, rest_pos maintained in cmd_response()
 
 /**
  * PASSIVE: Passive mode,   server(20) -> client(>1024)
@@ -39,10 +41,10 @@ typedef struct command {
 /* Used by cmd_to_id */
 typedef enum cmdlist {
     USER, PASS, RETR, STOR, QUIT, SYST, TYPE, PORT, 
-    PASV, MKD, CWD, PWD, LIST, RMD, RNFR, RNTO, ABOR
+    PASV, MKD, CWD, PWD, LIST, RMD, RNFR, RNTO, ABOR, REST
 } cmdlist;
 
 static const char *cmdlist_str[] = {
     "USER", "PASS", "RETR", "STOR", "QUIT", "SYST", "TYPE", "PORT", 
-    "PASV", "MKD", "CWD", "PWD", "LIST", "RMD", "RNFR", "RNTO", "ABOR"
+    "PASV", "MKD", "CWD", "PWD", "LIST", "RMD", "RNFR", "RNTO", "ABOR", "REST"
 };

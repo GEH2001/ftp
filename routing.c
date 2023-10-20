@@ -1,7 +1,10 @@
 #include "routing.h"
 
 void cmd_response(command *cmd, state *st) {
-    switch (cmd_to_id(cmd->code))
+    int cur_verb = cmd_to_id(cmd->code);
+    // if(cur_verb == RETR || cur_verb == STOR && st->last_verb != REST)
+    //     st->rest_pos = 0;
+    switch (cur_verb)
     {
     case USER: cmd_user(cmd, st); break;
     case PASS: cmd_pass(cmd, st); break;
@@ -20,12 +23,13 @@ void cmd_response(command *cmd, state *st) {
     case ABOR: cmd_quit(cmd, st); break;
     case RETR: cmd_retr(cmd, st); break;
     case STOR: cmd_stor(cmd, st); break;
+    case REST: cmd_rest(cmd, st); break;
     default:
-        sprintf(st->message, "?Invalid command.");
+        sprintf(st->message, "502 Invalid command.");
         write_state(st);
         break;
     }
-    st->last_verb = cmd_to_id(cmd->code);
+    st->last_verb = cur_verb;
 }
 
 void cmd_user(command *cmd, state *st) {
@@ -285,7 +289,9 @@ void cmd_retr(command *cmd, state *st) {
         }
         sprintf(st->message, "150 Opening BINARY mode data connection for %s", cmd->arg); // mask
         write_state(st);
-        int err_code = send_file(st->sock_data, cmd->arg);
+        if(st->last_verb != REST)   // Only when STOR follows by REST, will rest_pos work
+            st->rest_pos = 0;
+        int err_code = send_file(st->sock_data, cmd->arg, st->rest_pos);
         close_safely(st->sock_data); // close the data connection
         switch (err_code)
         {
@@ -324,7 +330,9 @@ void cmd_stor(command *cmd, state *st) {
         }
         sprintf(st->message, "150 Ready for receiving file."); // mask
         write_state(st);
-        int error_code = recv_file(st->sock_data, cmd->arg);
+        if(st->last_verb != REST)   // Only when STOR follows by REST, will rest_pos work
+            st->rest_pos = 0;
+        int error_code = recv_file(st->sock_data, cmd->arg, st->rest_pos);
         close_safely(st->sock_data);
         switch (error_code)
         {
@@ -341,6 +349,16 @@ void cmd_stor(command *cmd, state *st) {
             sprintf(st->message, "552 Something wrong.");
             break;
         }
+    } else {
+        sprintf(st->message, "530 Permission denied. First login with USER and PASS.");
+    }
+    write_state(st);
+}
+
+void cmd_rest(command *cmd, state *st) {
+    if(st->is_login) {
+        st->rest_pos = atoi(cmd->arg);
+        sprintf(st->message, "350 Restart position accepted (%d).", st->rest_pos);
     } else {
         sprintf(st->message, "530 Permission denied. First login with USER and PASS.");
     }
