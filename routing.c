@@ -23,7 +23,8 @@ void cmd_response(command *cmd, state *st) {
     case ABOR: cmd_quit(cmd, st); break;
     // case RETR: cmd_retr(cmd, st); break;
     case RETR: cmd_retr_thread(cmd, st); break;
-    case STOR: cmd_stor(cmd, st); break;
+    // case STOR: cmd_stor(cmd, st); break;
+    case STOR: cmd_stor_thread(cmd, st); break;
     case REST: cmd_rest(cmd, st); break;
     default:
         sprintf(st->message, "502 Invalid command.");
@@ -73,6 +74,8 @@ void cmd_port(command *cmd, state *st) {
             sprintf(st->message, "200 Entering activate mode.");
             st->mode = STANDARD;
             memcpy(st->pt_addr, ip, sizeof ip);
+            close_safely(st->sock_pasv);
+            close_safely(st->sock_data);
         } else {
             sprintf(st->message, "500 Usage: PORT h1,h2,h3,h4,p1,p2");
         }
@@ -338,8 +341,8 @@ void cmd_retr_thread(command *cmd, state *st) {
         st->rest_pos = 0;
     state *temp = (state*) malloc(sizeof(state));
     memcpy(temp, st, sizeof(state));
-    memset(temp->path, 0, sizeof temp->path);
-    strncpy(temp->path, cmd->arg, sizeof cmd->arg);
+    memset(temp->fpath, 0, sizeof temp->fpath);
+    strncpy(temp->fpath, cmd->arg, sizeof cmd->arg);
     // use thread to transfer data
     pthread_t thread_id;
     pthread_create(&thread_id, NULL, send_file_thread, (void*) temp);
@@ -381,6 +384,30 @@ void cmd_stor(command *cmd, state *st) {
         sprintf(st->message, "530 Permission denied. First login with USER and PASS.");
     }
     write_state(st);
+}
+
+void cmd_stor_thread(command *cmd, state *st) {
+    if(!st->is_login) {
+        sprintf(st->message, "530 Permission denied. First login with USER and PASS.");
+        write_state(st);
+        return;
+    }
+    if(create_data_conn(st) != 0) {
+        sprintf(st->message, "425 Use PASV or PORT to establish a data connection.");
+        write_state(st);
+        return;
+    }
+    sprintf(st->message, "150 Ready for receiving file."); // mask
+    write_state(st);
+    if(st->last_verb != REST)   // Only when STOR follows by REST, will rest_pos work
+        st->rest_pos = 0;
+    state* temp = (state*) malloc(sizeof(state));
+    memcpy(temp, st, sizeof(state));
+    memset(temp->fpath, 0, sizeof temp->fpath);
+    strncpy(temp->fpath, cmd->arg, sizeof temp->fpath);
+    pthread_t thread_id;
+    pthread_create(&thread_id, NULL, recv_file_thread, (void*) temp);
+    pthread_detach(thread_id);
 }
 
 void cmd_rest(command *cmd, state *st) {

@@ -209,7 +209,7 @@ int send_file(int sock_data, const char *path, int rest_pos) {
 
 void *send_file_thread(void* _st) {
     state* st = (state*) _st;
-    int err_code = send_file(st->sock_data, st->path, st->rest_pos);
+    int err_code = send_file(st->sock_data, st->fpath, st->rest_pos);
     close_safely(st->sock_data);
     switch (err_code)
     {
@@ -326,4 +326,28 @@ int recv_file(int sock_data, const char *path, int rest_pos) {
     }
     close(file_fd);
     return 0;
+}
+
+void* recv_file_thread(void* _st) {
+    state* st = (state*) _st;
+    int err_code = recv_file(st->sock_data, st->fpath, st->rest_pos);
+    close_safely(st->sock_data);
+    switch (err_code)
+    {
+    case 0:
+        sprintf(st->message, "226 Successfully stored.");
+        break;
+    case -1:
+        sprintf(st->message, "451 Server had a trouble saving the file.");
+        break;
+    case -2:
+        sprintf(st->message, "426 TCP connection was broken.");
+        break;
+    default:
+        sprintf(st->message, "552 Something wrong.");
+        break;
+    }
+    write_state(st);
+    free(st);
+    pthread_exit(0);
 }

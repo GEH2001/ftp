@@ -84,3 +84,6 @@ void close_safely(int sock_fd);
  *  @param rest_pos restart position from REST
  */
 int recv_file(int sock_data, const char *path, int rest_pos);
+
+/* Thread function to recv file */
+void* recv_file_thread(void* _st);

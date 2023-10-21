@@ -40,4 +40,5 @@ void cmd_quit(command *, state *);
 void cmd_retr(command *, state *);
 void cmd_retr_thread(command *, state *);
 void cmd_stor(command *, state *);
+void cmd_stor_thread(command *, state *);
 void cmd_rest(command *, state *);
